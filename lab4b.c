@@ -7,6 +7,16 @@
 #include <string.h>
 #include <sys/poll.h>
 #include <getopt.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include <openssl/bio.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/pem.h>
+#include <openssl/x509.h>
+#include <openssl/x509_vfy.h>
+
 
 const int B = 4275;
 const int R0 = 100;

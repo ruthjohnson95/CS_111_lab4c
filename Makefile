@@ -8,15 +8,11 @@ default: lab4b.o
 	$(CC) -lmraa -lm  -o lab4b lab4b.c
 
 test:
-	$(CC) -o lab4b lab4b.c
+	$(CC)  -lssl -lcrypto -o lab4b lab4b.c
 check:
 	bash test_script.sh
 clean:
 	rm lab4b-704275412.tar.gz
-	rm lab4b.c
-	rm README
-	rm Makefile
-	rm test_script.sh
 	rm lab4b.o
 	rm lab4b
 
