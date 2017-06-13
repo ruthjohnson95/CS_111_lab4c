@@ -1,0 +1,56 @@
+... Using temporary testing directory /tmp/TestTemp.1165
+... untaring
+lab4b.c
+README
+Makefile
+... checking for expected files
+        README ... OK
+        Makefile ... OK
+... checking for submitter info in README
+        NAME: ... RuthJohnson
+        EMAIL: ... ruthjohnson@ucla.edu
+        ID: ... 704275412
+... checking for expected make targets
+        clean ... OK
+        dist ... OK
+        check ... OK
+... checking for other files of expected types
+        lab4b.c ... OK
+... building default target(s)
+gcc    -c -o lab4b.o lab4b.c
+gcc -lmraa -lm  -o lab4b lab4b.c
+... checking for expected products
+        lab4b ... OK
+... lab4b detects/reports bogus arguments
+./lab4b: unrecognized option '--bogus'
+Error: Not valid argument
+... lab4b supports --scale, --perios, --log
+14:3:57 25.20
+... lab4b supports and logs all sensor commands
+   ... SCALE=F: OK
+DID NOT LOG PERIOD=1 command
+   ... START: OK
+   ... STOP: OK
+   ... OFF: OK
+   ... SHUTDOWN: OK
+   LOG FILE DUMP FOLLOWS   
+14:3:57 25.20
+SCALE=F
+...PERIOD=
+START
+STOP
+OFF
+14:3:57 SHUTDOWN
+... correct reporting format
+NO VALID REPORTS IN LOGFILE:
+14:3:57 25.20
+SCALE=F
+...PERIOD=
+START
+STOP
+OFF
+14:3:57 SHUTDOWN
+
+SUBMISSION lab4b-704275412.tar.gz ... fails sanity check with 2 errors!
+
+
