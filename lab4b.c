@@ -12,7 +12,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 
-#include <openssl/ssl.h> 
+#include <openssl/ssl.h>
 
 const int B = 4275;
 const int R0 = 100;
@@ -104,6 +104,23 @@ void set_args(int argc, char **argv)
 
 int main ( int argc, char **argv )
 {
+  /* SSL part */
+  SSL *sslClient = NULL:
+  SSL_library_init();
+  /*
+  SSL_load_error_strings();
+  OpenSSL_add_all_algorithms();
+  SSL_CTX *newContext = SSL_CTX_new(TLSv1_client_method());
+  sslClient = SSL_new(newContext);
+  SSL_set_fd(sslClient, fd);
+  SSL_connect(sslClient);
+  SSL_write();
+  SSL_read();
+  SSL_shutdown(sslClient);
+  SSL_free(sslClient);
+  */
+
+
   //mraa_aio_context adc_a0;
   //mraa_gpio_context gpio;
   uint16_t adcValue = 0;
