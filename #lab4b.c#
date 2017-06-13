@@ -10,11 +10,8 @@
 #include <getopt.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <stdint.h>
 
-#include <openssl/ssl.h> 
 
-const int B = 4275;
 const int R0 = 100;
 const int button_pin = 3;
 int fp;
