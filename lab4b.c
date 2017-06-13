@@ -12,6 +12,9 @@
 #include <fcntl.h>
 #include <stdint.h>
 
+#include <netdb.h>
+#include <netinet/in.h>
+
 #include <openssl/ssl.h>
 
 const int B = 4275;
@@ -119,6 +122,42 @@ int main ( int argc, char **argv )
   SSL_shutdown(sslClient);
   SSL_free(sslClient);
   */
+
+  /* TCP Connection */
+
+  int sockfd, portno, n;
+  struct sockaddr_in serv_addr;
+  struct hostent *server;
+
+  /* create a socket point */
+  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd < 0) {
+    perror("ERROR opening socket");
+    exit(1);
+  }
+
+  server = gethostbyname("https://lasr.cs.ucla.edu/TCP_SERVER/");
+  if (server == NULL) {
+    fprintf(stderr,"ERROR, no such host\n");
+    exit(0);
+  }
+
+  bzero((char *) &serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+  serv_addr.sin_port = htons(portno);
+  serv_addr.sin_addr.s_addr = inet_addr("131.179.192.136");
+
+  /* connect to server */
+  if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+    perror("ERROR connecting");
+    exit(1);
+  }
+
+
+
+
+
 
 
   //mraa_aio_context adc_a0;
