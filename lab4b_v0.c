@@ -15,6 +15,8 @@
 #include <netdb.h>
 #include <netinet/in.h>
 
+#include <openssl/ssl.h>
+
 const int B = 4275;
 const int R0 = 100;
 const int button_pin = 3;
@@ -26,13 +28,7 @@ int logflag=0;
 int period = 1;
 char* filename;
 
-int sockfd; 
-char* id_number;
-char* host_name;
-
 int GO_FLAG=1;
-
-//FILE *file_pointer;
 
 void m_shutdown()
 {
@@ -44,11 +40,7 @@ void m_shutdown()
   int min = tm_struct -> tm_min;
   int sec = tm_struct -> tm_sec;
 
-  dprintf(sockfd, "%02d:%02d:%02d SHUTDOWN\n",hour, min, sec);
-  if(logflag)
-    {
-      dprintf(fp, "%02d:%02d:%02d SHUTDOWN\n",hour, min, sec);
-    }
+  dprintf(fp, "%02d:%02d:%02d SHUTDOWN\n",hour, min, sec);
   exit(0);
 }
 
@@ -57,8 +49,8 @@ void set_args(int argc, char **argv)
   while(1){
 
     static struct option args[] = {
-      {"id", required_argument, 0, 'i'},
-      {"host", required_argument, 0, 'h'},
+      {"scale", required_argument, 0, 's'},
+      {"period", required_argument, 0, 'p'},
       {"log", required_argument,0, 'l'}
     };
 
@@ -66,7 +58,7 @@ void set_args(int argc, char **argv)
     int c;
 
     // get options from command line
-    c = getopt_long(argc, argv, "ihl:h:i:l",
+    c = getopt_long(argc, argv, "spl:p:s:l",
                     args, &option_index);
 
     /* Detect the end of the options. */
@@ -77,27 +69,28 @@ void set_args(int argc, char **argv)
 
     switch(c)
       {
-      case 'i': // id number
-        if(strlen(optarg) == 9)
-	  {
-	    id_number=optarg;
-	    fprintf(stderr, "Reading in ID...%s\n",optarg); 
-	  }
+      case 's': // scale
+        if(optarg[0] == 'F')
+        {
+          celcius=0;
+        }
+        else if(optarg[0] == 'C')
+        {
+          celcius=1;
+        }
         else
-	  {
-	    fprintf(stderr, "Error: Invalid id number option");
-	    exit(1);
-	  }
+        {
+          fprintf(stderr, "Error: Invalid scale option - %s\n",optarg);
+          exit(1);
+        }
         break;
 
-      case 'h': // host name
-	host_name = optarg;
-	fprintf(stderr,"hostname: %s\n", host_name); 
+      case 'p': // period
+        period=atoi(optarg);
         break;
 
       case 'l': // log
         filename = optarg;
-	fprintf(stderr,"log file: %s\n",filename); 
         logflag = 1;
         break;
 
@@ -114,16 +107,9 @@ void set_args(int argc, char **argv)
 
 int main ( int argc, char **argv )
 {
-
-  int  portno, n;
-
-  /* set the command line args */
-  set_args(argc, argv);
-
-  /* get port number */
-  portno = atoi(argv[4]);
-
   /* TCP Connection */
+
+  int sockfd,  portno, n;
   struct sockaddr_in  serv_addr;
   struct hostent *server;
 
@@ -143,41 +129,35 @@ int main ( int argc, char **argv )
   bzero((char *) &serv_addr, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
   bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
-  serv_addr.sin_port = htons(portno);
-  serv_addr.sin_addr.s_addr = inet_addr(host_name);
+  serv_addr.sin_port = htons(18000);
+  serv_addr.sin_addr.s_addr = inet_addr("131.179.192.136");
 
   /* connect to server */
   if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-    //perror("ERROR connecting");
+    perror("ERROR connecting");
     exit(1);
   }
+
+  /* SSL part */
   
-  if(logflag)
+  SSL *sslClient = NULL;
+  SSL_library_init();
+  SSL_load_error_strings();
+  OpenSSL_add_all_algorithms();
+
+  SSL_CTX *newContext = SSL_CTX_new(SSLv23_client_method());
+  sslClient = SSL_new(newContext);
+  SSL_set_fd(sslClient, sockfd);
+
+  if(SSL_connect(sslClient)!=1)
     {
-      fp = open(filename, O_CREAT | O_WRONLY | O_NONBLOCK, S_IREAD | S_IWRITE);
+      fprintf(stderr,"Error: cannot connect to server\n"); 
     }
 
   char* test_buf="ID=314159265\n";
-  test_buf="ID=314159265\n";
-  //write(sockfd,test_buf,strlen(test_buf));
-
-  char* id_prefix="ID=";
-  dprintf(sockfd,"ID=%s\n",id_number); 
-  
-  if(logflag)
-    {
-      dprintf(fp,"ID=%s\n",id_number);
-    }
-
-  /*
-  write(sockfd,id_prefix,strlen(id_prefix));
-  write(sockfd, id_number,strlen(id_number));
-  write(sockfd,"\n",1);
-
-  */ 
-  fprintf(stderr,"ID number: %d\n", id_number); 
-
-  FILE* sockfp = fdopen(sockfd,"r"); 
+  //  SSL_write(sslClient,test_buf,strlen(test_buf));
+  dprintf(sockfd,test_buf); 
+  fprintf(stdout,test_buf);
 
   //mraa_aio_context adc_a0;
   //mraa_gpio_context gpio;
@@ -193,19 +173,28 @@ int main ( int argc, char **argv )
   }
   */
 
-  //  char* buffer;
-  //size_t bufsize = 32;
+  /* set the command line args */
+  set_args(argc, argv);
+
+  char* buffer;
+  int bufsize = 32;
   size_t characters;
-  //buffer = (char *)malloc(bufsize * sizeof(char));
+  buffer = (char *)malloc(bufsize * sizeof(char));
 
   //gpio = mraa_gpio_init(button_pin);
   //mraa_gpio_dir(gpio, MRAA_GPIO_IN);
 
+  
 
   struct pollfd fds;
   int ret;
   fds.fd = sockfd; /* this is STDIN */
   fds.events = POLLIN | POLLHUP | POLLERR;
+
+  if(logflag)
+    {
+      fp = open(filename, O_CREAT | O_WRONLY | O_NONBLOCK);
+    }
 
   while(1){
   //while(!mraa_gpio_read(gpio)){ // while button is not pressed
@@ -241,10 +230,12 @@ int main ( int argc, char **argv )
       {
 	double rand_num;
 	rand_num=50.2+rand()%10;
-	//	printf("rand num: %d\n",rand_num); 
-       	fprintf(stderr, "%02d:%02d:%02d %0.1f\n",hour, min, sec, rand_num);
-
-	dprintf(sockfd, "%02d:%02d:%02d %0.1f\n",hour, min, sec,rand_num);
+	printf("rand num: %d\n",rand_num); 
+	fprintf(stdout, "%02d:%02d:%02d ",hour, min, sec);
+	fprintf (stdout, "%0.1f\n", rand_num);
+	
+	//	dprintf(sockfd, "%02d:%02d:%02d ",hour, min, sec);
+	//	dprintf (sockfd, "%0.1f\n", rand_num);
 
 	if(logflag)
 	  {
@@ -279,13 +270,10 @@ int main ( int argc, char **argv )
     if(fds.revents & POLLIN)
       {
 	fprintf(stderr, "Polling input...\n");
-
-	char* buffer;
-	size_t bufsize = 32;
-	buffer = (char *)malloc(bufsize * sizeof(char));
-       
-	characters = getline(&buffer, &bufsize, sockfp);
-	fprintf(stderr, "You typed: %s \n", buffer); 
+	int recieved = SSL_read(sslClient,&buffer, bufsize); 
+	//characters = getline(&buffer,&bufsize,stdin);
+	//	printf("You typed: %s \n",buffer);
+	write(2,&buffer,bufsize); 
 
 	if(strcmp(buffer, "OFF\n") == 0)
 	  {

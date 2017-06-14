@@ -1,5 +1,4 @@
 //#include "mraa.h"
-
 #include <math.h>
 #include <time.h>
 #include <unistd.h>
@@ -25,14 +24,10 @@ int celcius=0; // default: celcius; alt: F
 int logflag=0;
 int period = 1;
 char* filename;
-
 int sockfd; 
 char* id_number;
 char* host_name;
-
 int GO_FLAG=1;
-
-//FILE *file_pointer;
 
 void m_shutdown()
 {
@@ -148,7 +143,7 @@ int main ( int argc, char **argv )
 
   /* connect to server */
   if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-    //perror("ERROR connecting");
+    perror("ERROR connecting");
     exit(1);
   }
   
@@ -159,7 +154,6 @@ int main ( int argc, char **argv )
 
   char* test_buf="ID=314159265\n";
   test_buf="ID=314159265\n";
-  //write(sockfd,test_buf,strlen(test_buf));
 
   char* id_prefix="ID=";
   dprintf(sockfd,"ID=%s\n",id_number); 
@@ -169,15 +163,9 @@ int main ( int argc, char **argv )
       dprintf(fp,"ID=%s\n",id_number);
     }
 
-  /*
-  write(sockfd,id_prefix,strlen(id_prefix));
-  write(sockfd, id_number,strlen(id_number));
-  write(sockfd,"\n",1);
-
-  */ 
   fprintf(stderr,"ID number: %d\n", id_number); 
 
-  FILE* sockfp = fdopen(sockfd,"r"); 
+  //  FILE* sockfp = fdopen(sockfd,"r"); 
 
   //mraa_aio_context adc_a0;
   //mraa_gpio_context gpio;
@@ -248,9 +236,7 @@ int main ( int argc, char **argv )
 
 	if(logflag)
 	  {
-	    dprintf(fp, "%02d:%02d:%02d ",hour, min, sec);
-	    dprintf (fp, "%0.1f\n", rand_num);
-
+	    dprintf(fp, "%02d:%02d:%02d %0.1f\n",hour, min, sec,rand_num);
 	  }
       } // end of if reporting
 
@@ -278,14 +264,11 @@ int main ( int argc, char **argv )
     /* read input if there */
     if(fds.revents & POLLIN)
       {
-	fprintf(stderr, "Polling input...\n");
-
 	char* buffer;
 	size_t bufsize = 32;
 	buffer = (char *)malloc(bufsize * sizeof(char));
        
 	characters = getline(&buffer, &bufsize, sockfp);
-	fprintf(stderr, "You typed: %s \n", buffer); 
 
 	if(strcmp(buffer, "OFF\n") == 0)
 	  {

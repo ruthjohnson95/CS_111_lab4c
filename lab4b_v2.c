@@ -21,18 +21,15 @@ const int button_pin = 3;
 int fp;
 int make_reports=1;
 
+char* id_number;
+char* host_name;
+
 int celcius=0; // default: celcius; alt: F
 int logflag=0;
 int period = 1;
 char* filename;
 
-int sockfd; 
-char* id_number;
-char* host_name;
-
 int GO_FLAG=1;
-
-//FILE *file_pointer;
 
 void m_shutdown()
 {
@@ -44,11 +41,7 @@ void m_shutdown()
   int min = tm_struct -> tm_min;
   int sec = tm_struct -> tm_sec;
 
-  dprintf(sockfd, "%02d:%02d:%02d SHUTDOWN\n",hour, min, sec);
-  if(logflag)
-    {
-      dprintf(fp, "%02d:%02d:%02d SHUTDOWN\n",hour, min, sec);
-    }
+  dprintf(fp, "%02d:%02d:%02d SHUTDOWN\n",hour, min, sec);
   exit(0);
 }
 
@@ -66,7 +59,7 @@ void set_args(int argc, char **argv)
     int c;
 
     // get options from command line
-    c = getopt_long(argc, argv, "ihl:h:i:l",
+    c = getopt_long(argc, argv, "spl:p:s:l",
                     args, &option_index);
 
     /* Detect the end of the options. */
@@ -79,25 +72,22 @@ void set_args(int argc, char **argv)
       {
       case 'i': // id number
         if(strlen(optarg) == 9)
-	  {
-	    id_number=optarg;
-	    fprintf(stderr, "Reading in ID...%s\n",optarg); 
-	  }
+        {
+	  id_number=optarg; 
+        }
         else
-	  {
-	    fprintf(stderr, "Error: Invalid id number option");
-	    exit(1);
-	  }
+        {
+          fprintf(stderr, "Error: Invalid id number option");
+          exit(1);
+        }
         break;
 
-      case 'h': // host name
-	host_name = optarg;
-	fprintf(stderr,"hostname: %s\n", host_name); 
+      case 'h': // host name 
+	host_name = optarg; 
         break;
 
       case 'l': // log
         filename = optarg;
-	fprintf(stderr,"log file: %s\n",filename); 
         logflag = 1;
         break;
 
@@ -114,16 +104,17 @@ void set_args(int argc, char **argv)
 
 int main ( int argc, char **argv )
 {
-
-  int  portno, n;
+  int sockfd,  portno, n;
 
   /* set the command line args */
   set_args(argc, argv);
 
-  /* get port number */
+  /* get port number */ 
   portno = atoi(argv[4]);
+  //  fprintf(stderr,"port number: %d \n", portno); 
 
   /* TCP Connection */
+
   struct sockaddr_in  serv_addr;
   struct hostent *server;
 
@@ -134,11 +125,11 @@ int main ( int argc, char **argv )
     exit(1);
   }
 
-  server = gethostbyname("lever.cs.ucla.edu");
+    server = gethostbyname("lever.cs.ucla.edu");
   if (server == NULL) {
-    fprintf(stderr,"ERROR, no such host\n");
-    exit(0);
-  }
+   fprintf(stderr,"ERROR, no such host\n");
+   exit(0);
+   }
 
   bzero((char *) &serv_addr, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
@@ -151,31 +142,33 @@ int main ( int argc, char **argv )
     //perror("ERROR connecting");
     exit(1);
   }
-  
+
   if(logflag)
     {
-      fp = open(filename, O_CREAT | O_WRONLY | O_NONBLOCK, S_IREAD | S_IWRITE);
+      fp = open(filename, O_CREAT | O_WRONLY | O_NONBLOCK);
     }
 
+  /* send id number */ 
   char* test_buf="ID=314159265\n";
-  test_buf="ID=314159265\n";
-  //write(sockfd,test_buf,strlen(test_buf));
-
+  write(0,test_buf,strlen(test_buf));
+  test_buf="ID=123456789";
   char* id_prefix="ID=";
-  dprintf(sockfd,"ID=%s\n",id_number); 
-  
-  if(logflag)
-    {
-      dprintf(fp,"ID=%s\n",id_number);
-    }
 
   /*
-  write(sockfd,id_prefix,strlen(id_prefix));
-  write(sockfd, id_number,strlen(id_number));
-  write(sockfd,"\n",1);
-
+  write(0,id_prefix,strlen(id_prefix));
+  write(0, id_number,strlen(id_number));
+  write(0,"\n",1);
   */ 
-  fprintf(stderr,"ID number: %d\n", id_number); 
+
+  write(sockfd,id_prefix,strlen(id_prefix)); 
+  write(sockfd, id_number,strlen(id_number));
+  write(sockfd,"\n",1); 
+
+  /* 
+  dprintf(fp,id_prefix); 
+  dprintf(fp,id_number); 
+  dprintf(fp,"\n"); 
+  */ 
 
   FILE* sockfp = fdopen(sockfd,"r"); 
 
@@ -240,11 +233,13 @@ int main ( int argc, char **argv )
     if(make_reports)
       {
 	double rand_num;
-	rand_num=50.2+rand()%10;
-	//	printf("rand num: %d\n",rand_num); 
-       	fprintf(stderr, "%02d:%02d:%02d %0.1f\n",hour, min, sec, rand_num);
-
-	dprintf(sockfd, "%02d:%02d:%02d %0.1f\n",hour, min, sec,rand_num);
+	//	rand_num=50.2+rand()%10;
+	printf("rand num: %d\n",rand_num); 
+	fprintf(stdout, "%02d:%02d:%02d ",hour, min, sec);
+	fprintf (stdout, "%0.1f\n", rand_num);
+	
+	dprintf(sockfd, "%02d:%02d:%02d ",hour, min, sec);
+	dprintf (sockfd, "%0.1f\n", rand_num);
 
 	if(logflag)
 	  {

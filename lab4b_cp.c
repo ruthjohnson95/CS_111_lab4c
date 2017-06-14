@@ -1,5 +1,4 @@
-//#include "mraa.h"
-
+#include "mraa.h"
 #include <math.h>
 #include <time.h>
 #include <unistd.h>
@@ -8,12 +7,6 @@
 #include <string.h>
 #include <sys/poll.h>
 #include <getopt.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <stdint.h>
-
-#include <netdb.h>
-#include <netinet/in.h>
 
 const int B = 4275;
 const int R0 = 100;
@@ -26,15 +19,15 @@ int logflag=0;
 int period = 1;
 char* filename;
 
-int sockfd; 
-char* id_number;
-char* host_name;
+int GO_FLAG=1; 
 
-int GO_FLAG=1;
+void waitFor(unsigned int secs) {
+  unsigned int retTime = time(0) + secs;   // Get finishing time.
+  while (time(0) < retTime);               // Loop until it arrives.
+  GO_FLAG=1; 
+}
 
-//FILE *file_pointer;
-
-void m_shutdown()
+void shutdown()
 {
   // log time and SHUTDOWN
   time_t curtime;
@@ -44,21 +37,16 @@ void m_shutdown()
   int min = tm_struct -> tm_min;
   int sec = tm_struct -> tm_sec;
 
-  dprintf(sockfd, "%02d:%02d:%02d SHUTDOWN\n",hour, min, sec);
-  if(logflag)
-    {
-      dprintf(fp, "%02d:%02d:%02d SHUTDOWN\n",hour, min, sec);
-    }
+  dprintf(fp, "%02d:%02d:%02d SHUTDOWN\n",hour, min, sec);
   exit(0);
 }
-
 void set_args(int argc, char **argv)
 {
   while(1){
 
     static struct option args[] = {
-      {"id", required_argument, 0, 'i'},
-      {"host", required_argument, 0, 'h'},
+      {"scale", required_argument, 0, 's'},
+      {"period", required_argument, 0, 'p'},
       {"log", required_argument,0, 'l'}
     };
 
@@ -66,7 +54,7 @@ void set_args(int argc, char **argv)
     int c;
 
     // get options from command line
-    c = getopt_long(argc, argv, "ihl:h:i:l",
+    c = getopt_long(argc, argv, "spl:p:s:l",
                     args, &option_index);
 
     /* Detect the end of the options. */
@@ -77,27 +65,28 @@ void set_args(int argc, char **argv)
 
     switch(c)
       {
-      case 'i': // id number
-        if(strlen(optarg) == 9)
-	  {
-	    id_number=optarg;
-	    fprintf(stderr, "Reading in ID...%s\n",optarg); 
-	  }
+      case 's': // scale
+        if(optarg[0] == 'F')
+        {
+          celcius=0;
+        }
+        else if(optarg[0] == 'C')
+        {
+          celcius=1;
+        }
         else
-	  {
-	    fprintf(stderr, "Error: Invalid id number option");
-	    exit(1);
-	  }
+        {
+          fprintf(stderr, "Error: Invalid scale option - %s\n",optarg);
+          exit(1);
+        }
         break;
 
-      case 'h': // host name
-	host_name = optarg;
-	fprintf(stderr,"hostname: %s\n", host_name); 
+      case 'p': // period
+        period=atoi(optarg);
         break;
 
       case 'l': // log
         filename = optarg;
-	fprintf(stderr,"log file: %s\n",filename); 
         logflag = 1;
         break;
 
@@ -114,111 +103,49 @@ void set_args(int argc, char **argv)
 
 int main ( int argc, char **argv )
 {
+  mraa_aio_context adc_a0;
+  mraa_gpio_context gpio;
+  uint16_t adcValue = 0;
+  float adc_value_float = 0.0;
+  adc_a0 = mraa_aio_init(0);
 
-  int  portno, n;
+  int FLAG = 1;
+
+  if (adc_a0 == NULL) {
+    return 1;
+  }
 
   /* set the command line args */
   set_args(argc, argv);
 
-  /* get port number */
-  portno = atoi(argv[4]);
-
-  /* TCP Connection */
-  struct sockaddr_in  serv_addr;
-  struct hostent *server;
-
-  /* create a socket point */
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd < 0) {
-    perror("ERROR opening socket");
-    exit(1);
-  }
-
-  server = gethostbyname("lever.cs.ucla.edu");
-  if (server == NULL) {
-    fprintf(stderr,"ERROR, no such host\n");
-    exit(0);
-  }
-
-  bzero((char *) &serv_addr, sizeof(serv_addr));
-  serv_addr.sin_family = AF_INET;
-  bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
-  serv_addr.sin_port = htons(portno);
-  serv_addr.sin_addr.s_addr = inet_addr(host_name);
-
-  /* connect to server */
-  if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-    //perror("ERROR connecting");
-    exit(1);
-  }
-  
-  if(logflag)
-    {
-      fp = open(filename, O_CREAT | O_WRONLY | O_NONBLOCK, S_IREAD | S_IWRITE);
-    }
-
-  char* test_buf="ID=314159265\n";
-  test_buf="ID=314159265\n";
-  //write(sockfd,test_buf,strlen(test_buf));
-
-  char* id_prefix="ID=";
-  dprintf(sockfd,"ID=%s\n",id_number); 
-  
-  if(logflag)
-    {
-      dprintf(fp,"ID=%s\n",id_number);
-    }
-
-  /*
-  write(sockfd,id_prefix,strlen(id_prefix));
-  write(sockfd, id_number,strlen(id_number));
-  write(sockfd,"\n",1);
-
-  */ 
-  fprintf(stderr,"ID number: %d\n", id_number); 
-
-  FILE* sockfp = fdopen(sockfd,"r"); 
-
-  //mraa_aio_context adc_a0;
-  //mraa_gpio_context gpio;
-  uint16_t adcValue = 0;
-  float adc_value_float = 0.0;
-  //adc_a0 = mraa_aio_init(0);
-   
-  int FLAG = 1;
-
-  /*
-  if (adc_a0 == NULL) {
-    return 1;
-  }
-  */
-
-  //  char* buffer;
-  //size_t bufsize = 32;
+  char* buffer;
+  size_t bufsize = 32;
   size_t characters;
-  //buffer = (char *)malloc(bufsize * sizeof(char));
+  buffer = (char *)malloc(bufsize * sizeof(char));
 
-  //gpio = mraa_gpio_init(button_pin);
-  //mraa_gpio_dir(gpio, MRAA_GPIO_IN);
+  gpio = mraa_gpio_init(button_pin);
+  mraa_gpio_dir(gpio, MRAA_GPIO_IN);
 
 
   struct pollfd fds;
   int ret;
-  fds.fd = sockfd; /* this is STDIN */
+  fds.fd = 0; /* this is STDIN */
   fds.events = POLLIN | POLLHUP | POLLERR;
 
-  while(1){
-  //while(!mraa_gpio_read(gpio)){ // while button is not pressed
+  if(logflag)
+    {
+      fp = open(filename, O_CREAT | O_WRONLY | O_NONBLOCK);
+    }
+
+  while(!mraa_gpio_read(gpio)){ // while button is not pressed
 
     /* button reading */
-    //int button_value = mraa_gpio_read(gpio);
+    int button_value = mraa_gpio_read(gpio);
 
     /* Calculate temperature reading */
-    //adcValue = mraa_aio_read(adc_a0);
-    float tmp = 3.14;
+    adcValue = mraa_aio_read(adc_a0);
     float R;
-    //R = 1023.0/((float)adcValue)-1.0;
-    R = 1023.0/((float)tmp)-1.0;
+    R = 1023.0/((float)adcValue)-1.0;
     R = 100000.0*R;
     float temp  = 1.0/(log(R/100000.0)/B+1/298.15)-273.15;
 
@@ -227,6 +154,7 @@ int main ( int argc, char **argv )
       {
 	temp = temp*(9.0/5.0) + 32;
       }
+
 
     /* Local Time */
     time_t curtime;
@@ -239,35 +167,30 @@ int main ( int argc, char **argv )
     /* print logs  */
     if(make_reports)
       {
-	double rand_num;
-	rand_num=50.2+rand()%10;
-	//	printf("rand num: %d\n",rand_num); 
-       	fprintf(stderr, "%02d:%02d:%02d %0.1f\n",hour, min, sec, rand_num);
-
-	dprintf(sockfd, "%02d:%02d:%02d %0.1f\n",hour, min, sec,rand_num);
-
+	fprintf(stdout, "%02d:%02d:%02d ",hour, min, sec);
+	fprintf (stdout, "%0.1f\n", temp);
+	//    fprintf(stdout, "Gpio is %d\n", button_value);
 	if(logflag)
 	  {
 	    dprintf(fp, "%02d:%02d:%02d ",hour, min, sec);
-	    dprintf (fp, "%0.1f\n", rand_num);
-
+	    dprintf (fp, "%0.1f\n", temp);
+      //    fprintf(fp, "Gpio is %d\n", button_value);
 	  }
       } // end of if reporting
-
+    
     unsigned int retTime = time(0) + period;   // Get finishing time.
     while (time(0) < retTime )
       {
         // only do polling and button input
 	/* get button state */
-  /*
 	if(mraa_gpio_read(gpio))
 	  {
-	    m_shutdown();
+	    shutdown(); 
 	  }
-  */
-    /* poll for input */
-    ret = poll(&fds, 1, 0);
 
+	/* poll for input */
+    ret = poll(&fds, 1, 0);
+    
     /* check for polling errors */
     if(fds.revents & (POLLHUP+POLLERR))
       {
@@ -278,14 +201,8 @@ int main ( int argc, char **argv )
     /* read input if there */
     if(fds.revents & POLLIN)
       {
-	fprintf(stderr, "Polling input...\n");
-
-	char* buffer;
-	size_t bufsize = 32;
-	buffer = (char *)malloc(bufsize * sizeof(char));
-       
-	characters = getline(&buffer, &bufsize, sockfp);
-	fprintf(stderr, "You typed: %s \n", buffer); 
+	characters = getline(&buffer,&bufsize,stdin);
+	//	printf("You typed: %s \n",buffer);
 
 	if(strcmp(buffer, "OFF\n") == 0)
 	  {
@@ -294,7 +211,7 @@ int main ( int argc, char **argv )
 	      {
 		dprintf(fp, "OFF\n");
 	      }
-	    m_shutdown();
+	    shutdown();
 	  }
 	else if(strcmp(buffer, "STOP\n") == 0)
 	  {
@@ -334,6 +251,8 @@ int main ( int argc, char **argv )
 	  }
 	else if( strstr(buffer, "PERIOD=") != NULL )
 	  {
+	    //int index = strchr(buffer,"=")-buffer;
+
 	    period = atoi(buffer+7);
 
 	    //	    fprintf(stderr, "...PERIOD=%d\n", period);
@@ -349,19 +268,19 @@ int main ( int argc, char **argv )
 	  }
 
       } // end of poll if
-
+    
     } // end of only poll + button
 
   } // end of infinite for-loop
 
-  //mraa_aio_close(adc_a0);
+  mraa_aio_close(adc_a0);
 
   if(logflag)
     {
       close(fp);
     }
 
-  m_shutdown();
+  shutdown();
 
-  return 0;
+  return MRAA_SUCCESS;
 }

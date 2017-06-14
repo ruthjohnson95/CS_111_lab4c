@@ -26,13 +26,10 @@ int logflag=0;
 int period = 1;
 char* filename;
 
-int sockfd; 
 char* id_number;
 char* host_name;
 
 int GO_FLAG=1;
-
-//FILE *file_pointer;
 
 void m_shutdown()
 {
@@ -44,11 +41,7 @@ void m_shutdown()
   int min = tm_struct -> tm_min;
   int sec = tm_struct -> tm_sec;
 
-  dprintf(sockfd, "%02d:%02d:%02d SHUTDOWN\n",hour, min, sec);
-  if(logflag)
-    {
-      dprintf(fp, "%02d:%02d:%02d SHUTDOWN\n",hour, min, sec);
-    }
+  dprintf(fp, "%02d:%02d:%02d SHUTDOWN\n",hour, min, sec);
   exit(0);
 }
 
@@ -92,12 +85,10 @@ void set_args(int argc, char **argv)
 
       case 'h': // host name
 	host_name = optarg;
-	fprintf(stderr,"hostname: %s\n", host_name); 
         break;
 
       case 'l': // log
         filename = optarg;
-	fprintf(stderr,"log file: %s\n",filename); 
         logflag = 1;
         break;
 
@@ -115,7 +106,7 @@ void set_args(int argc, char **argv)
 int main ( int argc, char **argv )
 {
 
-  int  portno, n;
+  int sockfd,  portno, n;
 
   /* set the command line args */
   set_args(argc, argv);
@@ -151,10 +142,10 @@ int main ( int argc, char **argv )
     //perror("ERROR connecting");
     exit(1);
   }
-  
+
   if(logflag)
     {
-      fp = open(filename, O_CREAT | O_WRONLY | O_NONBLOCK, S_IREAD | S_IWRITE);
+      fp = open(filename, O_CREAT | O_WRONLY | O_NONBLOCK);
     }
 
   char* test_buf="ID=314159265\n";
@@ -242,7 +233,7 @@ int main ( int argc, char **argv )
 	double rand_num;
 	rand_num=50.2+rand()%10;
 	//	printf("rand num: %d\n",rand_num); 
-       	fprintf(stderr, "%02d:%02d:%02d %0.1f\n",hour, min, sec, rand_num);
+	fprintf(stdout, "%02d:%02d:%02d %0.1f\n",hour, min, sec, rand_num);
 
 	dprintf(sockfd, "%02d:%02d:%02d %0.1f\n",hour, min, sec,rand_num);
 

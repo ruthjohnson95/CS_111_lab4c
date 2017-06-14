@@ -10,8 +10,14 @@
 #include <getopt.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdint.h>
 
+#include <netdb.h>
+#include <netinet/in.h>
 
+#include <openssl/ssl.h>
+
+const int B = 4275;
 const int R0 = 100;
 const int button_pin = 3;
 int fp;
@@ -24,7 +30,7 @@ char* filename;
 
 int GO_FLAG=1;
 
-void shutdown()
+void m_shutdown()
 {
   // log time and SHUTDOWN
   time_t curtime;
@@ -101,12 +107,66 @@ void set_args(int argc, char **argv)
 
 int main ( int argc, char **argv )
 {
+  /* TCP Connection */
+
+  int sockfd,  portno, n;
+  struct sockaddr_in  serv_addr;
+  struct hostent *server;
+
+  /* create a socket point */
+  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd < 0) {
+    perror("ERROR opening socket");
+    exit(1);
+  }
+
+  server = gethostbyname("lever.cs.ucla.edu");
+  if (server == NULL) {
+    fprintf(stderr,"ERROR, no such host\n");
+    exit(0);
+  }
+
+  bzero((char *) &serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+  serv_addr.sin_port = htons(18000);
+  serv_addr.sin_addr.s_addr = inet_addr("131.179.192.136");
+
+  /* connect to server */
+  if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+    //perror("ERROR connecting");
+    exit(1);
+  }
+
+  char* test_buf="ID=314159265\n";
+  //  write(sockfd,test_buf,strlen(test_buf));
+
+  /* SSL part */
+  
+  SSL *sslClient = NULL;
+  SSL_library_init();
+  SSL_load_error_strings();
+  OpenSSL_add_all_algorithms();
+
+  SSL_CTX *newContext = SSL_CTX_new(SSLv23_client_method());
+  sslClient = SSL_new(newContext);
+
+  SSL_set_fd(sslClient, sockfd);
+  if(SSL_connect(sslClient)!=1)
+    {
+      fprintf(stderr,"Error: cannot connect to server\n"); 
+    }
+
+  test_buf="ID=314159265\n";
+  write(sockfd,test_buf,strlen(test_buf));
+  SSL_write(sslClient,test_buf,strlen(test_buf)); 
+
   //mraa_aio_context adc_a0;
   //mraa_gpio_context gpio;
   uint16_t adcValue = 0;
   float adc_value_float = 0.0;
   //adc_a0 = mraa_aio_init(0);
-
+   
   int FLAG = 1;
 
   /*
@@ -119,7 +179,7 @@ int main ( int argc, char **argv )
   set_args(argc, argv);
 
   char* buffer;
-  size_t bufsize = 32;
+  int bufsize = 32;
   size_t characters;
   buffer = (char *)malloc(bufsize * sizeof(char));
 
@@ -129,7 +189,7 @@ int main ( int argc, char **argv )
 
   struct pollfd fds;
   int ret;
-  fds.fd = 0; /* this is STDIN */
+  fds.fd = sockfd; /* this is STDIN */
   fds.events = POLLIN | POLLHUP | POLLERR;
 
   if(logflag)
@@ -169,13 +229,19 @@ int main ( int argc, char **argv )
     /* print logs  */
     if(make_reports)
       {
+	double rand_num;
+	rand_num=50.2+rand()%10;
+	printf("rand num: %d\n",rand_num); 
 	fprintf(stdout, "%02d:%02d:%02d ",hour, min, sec);
-	fprintf (stdout, "%0.1f\n", temp);
+	fprintf (stdout, "%0.1f\n", rand_num);
+	
+	dprintf(sockfd, "%02d:%02d:%02d ",hour, min, sec);
+	dprintf (sockfd, "%0.1f\n", rand_num);
 
 	if(logflag)
 	  {
 	    dprintf(fp, "%02d:%02d:%02d ",hour, min, sec);
-	    dprintf (fp, "%0.1f\n", temp);
+	    dprintf (fp, "%0.1f\n", rand_num);
 
 	  }
       } // end of if reporting
@@ -188,7 +254,7 @@ int main ( int argc, char **argv )
   /*
 	if(mraa_gpio_read(gpio))
 	  {
-	    shutdown();
+	    m_shutdown();
 	  }
   */
     /* poll for input */
@@ -204,7 +270,9 @@ int main ( int argc, char **argv )
     /* read input if there */
     if(fds.revents & POLLIN)
       {
-	characters = getline(&buffer,&bufsize,stdin);
+	fprintf(stderr, "Polling input...\n");
+	int recieved = SSL_read(sslClient,&buffer, bufsize); 
+	//characters = getline(&buffer,&bufsize,stdin);
 	//	printf("You typed: %s \n",buffer);
 
 	if(strcmp(buffer, "OFF\n") == 0)
@@ -214,7 +282,7 @@ int main ( int argc, char **argv )
 	      {
 		dprintf(fp, "OFF\n");
 	      }
-	    shutdown();
+	    m_shutdown();
 	  }
 	else if(strcmp(buffer, "STOP\n") == 0)
 	  {
@@ -281,7 +349,7 @@ int main ( int argc, char **argv )
       close(fp);
     }
 
-  shutdown();
+  m_shutdown();
 
   return 0;
 }

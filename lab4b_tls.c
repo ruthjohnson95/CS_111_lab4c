@@ -15,6 +15,13 @@
 #include <netdb.h>
 #include <netinet/in.h>
 
+#include <openssl/bio.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/pem.h>
+#include <openssl/x509.h>
+#include <openssl/x509_vfy.h>
+
 const int B = 4275;
 const int R0 = 100;
 const int button_pin = 3;
@@ -151,6 +158,20 @@ int main ( int argc, char **argv )
     //perror("ERROR connecting");
     exit(1);
   }
+
+  /* SSL connection */
+  SSL *ssl_server;
+  SSL_library_init();
+
+  SSL_CTX* ssl_ctx = SSL_CTX_new(SSLv23_client_method());
+  ssl_server = SSL_new(ssl_ctx);
+  SSL_set_fd(ssl_server, sockfd);
+  if(SSL_connect(ssl_server) != 1)
+    {
+      fprintf(stderr,"Error: could not connect to TLS server\n");
+    }
+
+
   
   if(logflag)
     {
@@ -159,10 +180,10 @@ int main ( int argc, char **argv )
 
   char* test_buf="ID=314159265\n";
   test_buf="ID=314159265\n";
-  //write(sockfd,test_buf,strlen(test_buf));
+  fprintf(stderr, "sending message to the server...\n"); 
+  SSL_write(ssl_server,test_buf,strlen(test_buf)); 
 
-  char* id_prefix="ID=";
-  dprintf(sockfd,"ID=%s\n",id_number); 
+   dprintf(sockfd,"ID=%s\n",id_number); 
   
   if(logflag)
     {

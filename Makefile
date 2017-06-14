@@ -4,17 +4,22 @@
 
 CC=gcc
 
-default: lab4b.o
-	$(CC) -lmraa -lm  -o lab4b lab4b.c
+default:
+	$(CC)  -lm -o lab4c_tcp lab4c_tcp.c
+	$(CC)  -lssl -lcrypto -lm -o lab4b_tls lab4c_tls.c
 
-test:
-	$(CC)  -lssl -lcrypto -lm -o lab4b lab4b.c
+tcp:
+	$(CC)  -lm -o lab4c_tcp lab4c_tcp.c
+
+tls: 
+	$(CC)  -lssl -lcrypto -lm -o lab4b_tls lab4b_tls.c
 check:
 	bash test_script.sh
 clean:
-	rm lab4b-704275412.tar.gz
-	rm lab4b.o
-	rm lab4b
+	rm lab4c-704275412.tar.gz
+	rm lab4c_tcp
+	rm lab4c_tls
+
 
 dist:
-	tar -czvf lab4b-704275412.tar.gz lab4b.c README Makefile test_script.sh
+	tar -czvf lab4c-704275412.tar.gz lab4b_tls.c lab4c_tcp.c  README Makefile
