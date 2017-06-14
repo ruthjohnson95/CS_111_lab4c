@@ -169,8 +169,8 @@ int main ( int argc, char **argv )
 
   //  FILE* sockfp = fdopen(sockfd,"r"); 
 
-  mraa_aio_context adc_a0;
-  mraa_gpio_context gpio;
+    mraa_aio_context adc_a0;
+  //  mraa_gpio_context gpio;
   
   uint16_t adcValue = 0;
   float adc_value_float = 0.0;
