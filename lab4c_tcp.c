@@ -24,7 +24,7 @@ int celcius=0; // default: celcius; alt: F
 int logflag=0;
 int period = 1;
 char* filename;
-int sockfd; 
+int sockfd;
 char* id_number;
 char* host_name;
 int GO_FLAG=1;
@@ -76,7 +76,7 @@ void set_args(int argc, char **argv)
         if(strlen(optarg) == 9)
 	  {
 	    id_number=optarg;
-	    fprintf(stderr, "Reading in ID...%s\n",optarg); 
+	    fprintf(stderr, "Reading in ID...%s\n",optarg);
 	  }
         else
 	  {
@@ -87,12 +87,12 @@ void set_args(int argc, char **argv)
 
       case 'h': // host name
 	host_name = optarg;
-	fprintf(stderr,"hostname: %s\n", host_name); 
+	fprintf(stderr,"hostname: %s\n", host_name);
         break;
 
       case 'l': // log
         filename = optarg;
-	fprintf(stderr,"log file: %s\n",filename); 
+	fprintf(stderr,"log file: %s\n",filename);
         logflag = 1;
         break;
 
@@ -146,7 +146,7 @@ int main ( int argc, char **argv )
     perror("ERROR connecting");
     exit(1);
   }
-  
+
   if(logflag)
     {
       fp = open(filename, O_CREAT | O_WRONLY | O_NONBLOCK, S_IREAD | S_IWRITE);
@@ -156,8 +156,8 @@ int main ( int argc, char **argv )
   test_buf="ID=314159265\n";
 
   char* id_prefix="ID=";
-  dprintf(sockfd,"ID=%s\n",id_number); 
-  
+  dprintf(sockfd,"ID=%s\n",id_number);
+
   if(logflag)
     {
       dprintf(fp,"ID=%s\n",id_number);
@@ -165,24 +165,24 @@ int main ( int argc, char **argv )
 
   FILE* sockfp = fdopen(sockfd,"r");
 
-  fprintf(stderr,"ID number: %d\n", id_number); 
+  fprintf(stderr,"ID number: %d\n", id_number);
 
-  //  FILE* sockfp = fdopen(sockfd,"r"); 
+  //  FILE* sockfp = fdopen(sockfd,"r");
 
     mraa_aio_context adc_a0;
   //  mraa_gpio_context gpio;
-  
+
   uint16_t adcValue = 0;
   float adc_value_float = 0.0;
   adc_a0 = mraa_aio_init(0);
-   
+
   int FLAG = 1;
 
-  
+
   if (adc_a0 == NULL) {
     return 1;
   }
-  
+
 
   //  char* buffer;
   //size_t bufsize = 32;
@@ -206,10 +206,8 @@ int main ( int argc, char **argv )
 
     /* Calculate temperature reading */
     adcValue = mraa_aio_read(adc_a0);
-    float tmp = 3.14;
     float R;
     R = 1023.0/((float)adcValue)-1.0;
-    R = 1023.0/((float)tmp)-1.0;
     R = 100000.0*R;
     float temp  = 1.0/(log(R/100000.0)/B+1/298.15)-273.15;
 
@@ -230,9 +228,7 @@ int main ( int argc, char **argv )
     /* print logs  */
     if(make_reports)
       {
-	double rand_num;
-	rand_num=50.2+rand()%10;
-	//	printf("rand num: %d\n",rand_num); 
+
        	fprintf(stderr, "%02d:%02d:%02d %0.1f\n",hour, min, sec, temp);
 
 	dprintf(sockfd, "%02d:%02d:%02d %0.1f\n",hour, min, sec, temp);
@@ -270,7 +266,7 @@ int main ( int argc, char **argv )
 	char* buffer;
 	size_t bufsize = 32;
 	buffer = (char *)malloc(bufsize * sizeof(char));
-       
+
 	characters = getline(&buffer, &bufsize, sockfp);
 
 	if(strcmp(buffer, "OFF\n") == 0)
