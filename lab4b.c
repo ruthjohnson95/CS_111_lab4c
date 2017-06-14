@@ -15,8 +15,6 @@
 #include <netdb.h>
 #include <netinet/in.h>
 
-#include <openssl/ssl.h>
-
 const int B = 4275;
 const int R0 = 100;
 const int button_pin = 3;
@@ -28,9 +26,12 @@ int logflag=0;
 int period = 1;
 char* filename;
 
+char* id_number;
+char* host_name;
+
 int GO_FLAG=1;
 
-void shutdown()
+void m_shutdown()
 {
   // log time and SHUTDOWN
   time_t curtime;
@@ -49,8 +50,8 @@ void set_args(int argc, char **argv)
   while(1){
 
     static struct option args[] = {
-      {"scale", required_argument, 0, 's'},
-      {"period", required_argument, 0, 'p'},
+      {"id", required_argument, 0, 'i'},
+      {"host", required_argument, 0, 'h'},
       {"log", required_argument,0, 'l'}
     };
 
@@ -58,7 +59,7 @@ void set_args(int argc, char **argv)
     int c;
 
     // get options from command line
-    c = getopt_long(argc, argv, "spl:p:s:l",
+    c = getopt_long(argc, argv, "ihl:h:i:l",
                     args, &option_index);
 
     /* Detect the end of the options. */
@@ -69,24 +70,21 @@ void set_args(int argc, char **argv)
 
     switch(c)
       {
-      case 's': // scale
-        if(optarg[0] == 'F')
-        {
-          celcius=0;
-        }
-        else if(optarg[0] == 'C')
-        {
-          celcius=1;
-        }
+      case 'i': // id number
+        if(strlen(optarg) == 9)
+	  {
+	    id_number=optarg;
+	    fprintf(stderr, "Reading in ID...%s\n",optarg); 
+	  }
         else
-        {
-          fprintf(stderr, "Error: Invalid scale option - %s\n",optarg);
-          exit(1);
-        }
+	  {
+	    fprintf(stderr, "Error: Invalid id number option");
+	    exit(1);
+	  }
         break;
 
-      case 'p': // period
-        period=atoi(optarg);
+      case 'h': // host name
+	host_name = optarg;
         break;
 
       case 'l': // log
@@ -107,26 +105,17 @@ void set_args(int argc, char **argv)
 
 int main ( int argc, char **argv )
 {
-  /* SSL part */
-  SSL *sslClient = NULL:
-  SSL_library_init();
-  /*
-  SSL_load_error_strings();
-  OpenSSL_add_all_algorithms();
-  SSL_CTX *newContext = SSL_CTX_new(TLSv1_client_method());
-  sslClient = SSL_new(newContext);
-  SSL_set_fd(sslClient, fd);
-  SSL_connect(sslClient);
-  SSL_write();
-  SSL_read();
-  SSL_shutdown(sslClient);
-  SSL_free(sslClient);
-  */
+
+  int sockfd,  portno, n;
+
+  /* set the command line args */
+  set_args(argc, argv);
+
+  /* get port number */
+  portno = atoi(argv[4]);
 
   /* TCP Connection */
-
-  int sockfd, portno, n;
-  struct sockaddr_in serv_addr;
+  struct sockaddr_in  serv_addr;
   struct hostent *server;
 
   /* create a socket point */
@@ -136,7 +125,7 @@ int main ( int argc, char **argv )
     exit(1);
   }
 
-  server = gethostbyname("https://lasr.cs.ucla.edu/TCP_SERVER/");
+  server = gethostbyname("lever.cs.ucla.edu");
   if (server == NULL) {
     fprintf(stderr,"ERROR, no such host\n");
     exit(0);
@@ -146,26 +135,42 @@ int main ( int argc, char **argv )
   serv_addr.sin_family = AF_INET;
   bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
   serv_addr.sin_port = htons(portno);
-  serv_addr.sin_addr.s_addr = inet_addr("131.179.192.136");
+  serv_addr.sin_addr.s_addr = inet_addr(host_name);
 
   /* connect to server */
   if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-    perror("ERROR connecting");
+    //perror("ERROR connecting");
     exit(1);
   }
 
+  if(logflag)
+    {
+      fp = open(filename, O_CREAT | O_WRONLY | O_NONBLOCK);
+    }
 
+  char* test_buf="ID=314159265\n";
+  test_buf="ID=314159265\n";
+  //write(sockfd,test_buf,strlen(test_buf));
 
+  char* id_prefix="ID=";
+  dprintf(sockfd,"ID=%s\n",id_number); 
 
+  /*
+  write(sockfd,id_prefix,strlen(id_prefix));
+  write(sockfd, id_number,strlen(id_number));
+  write(sockfd,"\n",1);
 
+  */ 
+  fprintf(stderr,"ID number: %d\n", id_number); 
 
+  FILE* sockfp = fdopen(sockfd,"r"); 
 
   //mraa_aio_context adc_a0;
   //mraa_gpio_context gpio;
   uint16_t adcValue = 0;
   float adc_value_float = 0.0;
   //adc_a0 = mraa_aio_init(0);
-
+   
   int FLAG = 1;
 
   /*
@@ -174,13 +179,10 @@ int main ( int argc, char **argv )
   }
   */
 
-  /* set the command line args */
-  set_args(argc, argv);
-
-  char* buffer;
-  size_t bufsize = 32;
+  //  char* buffer;
+  //size_t bufsize = 32;
   size_t characters;
-  buffer = (char *)malloc(bufsize * sizeof(char));
+  //buffer = (char *)malloc(bufsize * sizeof(char));
 
   //gpio = mraa_gpio_init(button_pin);
   //mraa_gpio_dir(gpio, MRAA_GPIO_IN);
@@ -188,13 +190,8 @@ int main ( int argc, char **argv )
 
   struct pollfd fds;
   int ret;
-  fds.fd = 0; /* this is STDIN */
+  fds.fd = sockfd; /* this is STDIN */
   fds.events = POLLIN | POLLHUP | POLLERR;
-
-  if(logflag)
-    {
-      fp = open(filename, O_CREAT | O_WRONLY | O_NONBLOCK);
-    }
 
   while(1){
   //while(!mraa_gpio_read(gpio)){ // while button is not pressed
@@ -228,13 +225,19 @@ int main ( int argc, char **argv )
     /* print logs  */
     if(make_reports)
       {
+	double rand_num;
+	rand_num=50.2+rand()%10;
+	printf("rand num: %d\n",rand_num); 
 	fprintf(stdout, "%02d:%02d:%02d ",hour, min, sec);
-	fprintf (stdout, "%0.1f\n", temp);
+	fprintf (stdout, "%0.1f\n", rand_num);
+	
+	dprintf(sockfd, "%02d:%02d:%02d ",hour, min, sec);
+	dprintf (sockfd, "%0.1f\n", rand_num);
 
 	if(logflag)
 	  {
 	    dprintf(fp, "%02d:%02d:%02d ",hour, min, sec);
-	    dprintf (fp, "%0.1f\n", temp);
+	    dprintf (fp, "%0.1f\n", rand_num);
 
 	  }
       } // end of if reporting
@@ -247,7 +250,7 @@ int main ( int argc, char **argv )
   /*
 	if(mraa_gpio_read(gpio))
 	  {
-	    shutdown();
+	    m_shutdown();
 	  }
   */
     /* poll for input */
@@ -263,8 +266,14 @@ int main ( int argc, char **argv )
     /* read input if there */
     if(fds.revents & POLLIN)
       {
-	characters = getline(&buffer,&bufsize,stdin);
-	//	printf("You typed: %s \n",buffer);
+	fprintf(stderr, "Polling input...\n");
+
+	char* buffer;
+	size_t bufsize = 32;
+	buffer = (char *)malloc(bufsize * sizeof(char));
+       
+	characters = getline(&buffer, &bufsize, sockfp);
+	fprintf(stderr, "You typed: %s \n", buffer); 
 
 	if(strcmp(buffer, "OFF\n") == 0)
 	  {
@@ -273,7 +282,7 @@ int main ( int argc, char **argv )
 	      {
 		dprintf(fp, "OFF\n");
 	      }
-	    shutdown();
+	    m_shutdown();
 	  }
 	else if(strcmp(buffer, "STOP\n") == 0)
 	  {
@@ -340,7 +349,7 @@ int main ( int argc, char **argv )
       close(fp);
     }
 
-  shutdown();
+  m_shutdown();
 
   return 0;
 }
