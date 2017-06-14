@@ -22,4 +22,4 @@ clean:
 
 
 dist:
-	tar -czvf lab4c-704275412.tar.gz lab4c_tls.c lab4c_tcp.c  README Makefile
+	tar -czvf lab4c-704275412.tar.gz lab4b_tls.c lab4c_tcp.c  README Makefile

@@ -1,0 +1,24 @@
+# NAME: Ruth Johnson
+# EMAIL: ruthjohnson@ucla.edu
+# ID: 704275412
+
+Files:
+
+lab4b.c - source code that implements  an embedded application that builds and runs (with no errors or warnings) on an Edison
+
+Makefile - builds and tests applications with: default, check, clean, dist 
+
+README - this file that describes the files and methodologies used in the project 
+
+
+Resources Used:
+https://navinbhaskar.wordpress.com/2016/07/05/cc-on-intel-edisongalileo-part5temperature-sensor/
+http://www.cprogramming.com/tutorial/cfileio.html
+https://www.tutorialspoint.com/cprogramming/c_input_output.htm
+
+https://linux.die.net/man/3/localtime
+
+http://fresh2refresh.com/c-programming/c-time-related-functions/
+
+Discussion Slides from Discussion 1B 
+
