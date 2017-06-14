@@ -1,4 +1,4 @@
-//#include "mraa.h"
+#include "mraa.h"
 #include <math.h>
 #include <time.h>
 #include <unistd.h>
@@ -169,19 +169,20 @@ int main ( int argc, char **argv )
 
   //  FILE* sockfp = fdopen(sockfd,"r"); 
 
-  //mraa_aio_context adc_a0;
-  //mraa_gpio_context gpio;
+  mraa_aio_context adc_a0;
+  mraa_gpio_context gpio;
+  
   uint16_t adcValue = 0;
   float adc_value_float = 0.0;
-  //adc_a0 = mraa_aio_init(0);
+  adc_a0 = mraa_aio_init(0);
    
   int FLAG = 1;
 
-  /*
+  
   if (adc_a0 == NULL) {
     return 1;
   }
-  */
+  
 
   //  char* buffer;
   //size_t bufsize = 32;
@@ -204,10 +205,10 @@ int main ( int argc, char **argv )
     //int button_value = mraa_gpio_read(gpio);
 
     /* Calculate temperature reading */
-    //adcValue = mraa_aio_read(adc_a0);
+    adcValue = mraa_aio_read(adc_a0);
     float tmp = 3.14;
     float R;
-    //R = 1023.0/((float)adcValue)-1.0;
+    R = 1023.0/((float)adcValue)-1.0;
     R = 1023.0/((float)tmp)-1.0;
     R = 100000.0*R;
     float temp  = 1.0/(log(R/100000.0)/B+1/298.15)-273.15;
@@ -232,13 +233,13 @@ int main ( int argc, char **argv )
 	double rand_num;
 	rand_num=50.2+rand()%10;
 	//	printf("rand num: %d\n",rand_num); 
-       	fprintf(stderr, "%02d:%02d:%02d %0.1f\n",hour, min, sec, rand_num);
+       	fprintf(stderr, "%02d:%02d:%02d %0.1f\n",hour, min, sec, temp);
 
-	dprintf(sockfd, "%02d:%02d:%02d %0.1f\n",hour, min, sec,rand_num);
+	dprintf(sockfd, "%02d:%02d:%02d %0.1f\n",hour, min, sec, temp);
 
 	if(logflag)
 	  {
-	    dprintf(fp, "%02d:%02d:%02d %0.1f\n",hour, min, sec,rand_num);
+	    dprintf(fp, "%02d:%02d:%02d %0.1f\n",hour, min, sec, temp);
 	  }
       } // end of if reporting
 
