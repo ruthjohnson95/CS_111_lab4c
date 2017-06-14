@@ -6,7 +6,7 @@ CC=gcc
 
 default:
 	$(CC)  -lmraa -lm -o lab4c_tcp lab4c_tcp.c
-	$(CC)  -lmraa -lssl -lcrypto -lm -o lab4b_tls lab4c_tls.c
+	$(CC)  -lmraa -lssl -lcrypto -lm -o lab4c_tls lab4c_tls.c
 
 tcp:
 	$(CC)  -lm -o lab4c_tcp lab4c_tcp.c
